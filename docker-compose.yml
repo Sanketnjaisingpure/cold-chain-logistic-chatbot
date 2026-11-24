@@ -1,0 +1,27 @@
+
+services:
+  cloud-sql-proxy:
+    image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.18.2
+    container_name: cloud-sql-proxy
+    command:
+      - "--address=0.0.0.0"
+      - "--port=5432"
+      - "--credentials-file=/config/adc.json"
+      - "strong-atlas-514713-f5:asia-south1:cold-chain-database"
+    volumes:
+      - "${APPDATA}/gcloud/application_default_credentials.json:/config/adc.json:ro"
+    restart: unless-stopped
+
+  python-ingestion:
+    build: .
+    container_name: python-ingestion
+    depends_on:
+      - cloud-sql-proxy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: cloud-sql-proxy
+      DB_PORT: "5432"
+    volumes:
+      - .:/app
+    command: python scripts/ingest_legacy_data.py
